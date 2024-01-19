@@ -3,7 +3,7 @@ from threading import Thread
 
 
 def t1():
-    time.sleep(10)
+    time.sleep(1000)
 
 
 thread_1 = Thread(target=t1)
