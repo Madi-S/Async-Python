@@ -11,7 +11,7 @@ async def main():
     # Create 3 tasks
     for i in range(3):
         asyncio.create_task(worker(i + 1))
-    
+
     while True:
         print(f'main message')
         await asyncio.sleep(1)
