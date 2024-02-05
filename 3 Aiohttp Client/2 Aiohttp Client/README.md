@@ -33,3 +33,23 @@
 ## Примеры запросов
 
 Смотри `2_examples.py`
+
+## Data Classes
+
+Пример ситуации когда нужные датаклассы - у нас есть некоторая функция, которая обращается к ресурсу httpbin.org и возвращает тело ответа в словаре:
+
+```python
+import asyncio
+import aiohttp
+
+async def get_json():
+    async with aiohttp.ClientSession() as session:
+        async with session.get('http://httpbin.org/get') as r:
+            return await r.json()
+
+asyncio.run(get_json())
+```
+
+Без запуска кода или без документации портала httpbin нельзя определить что возвращает API. Для понимания кода было бы очень удобно знать структуру ответа API, а в идеале иметь Python объект, который ее описывает. Для таких целей в Python есть `dataclass`. Этот декоратор позволяет удобно описывать и структурировать данные без оперирования словарями.
+
+Смотри `3_dataclass.py`
