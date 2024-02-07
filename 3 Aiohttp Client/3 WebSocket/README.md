@@ -31,3 +31,51 @@
 -   Бразуерные игры
 -   Чаты и уведомления на сайте в реальном времени
 -   Биржевые сервисы для отображения изменения котировок
+
+## Aiohttp Web Socket Client
+
+Смотри `1_ws_client.py`
+
+Как и в случае с обычным http-запросом, нужно создать объект ClientSession. Для ws справедливы http-параметры: заголовки, cookies, timeout подключения и т.д.
+
+Работает так, потому что инициализация ws-соединений начинается с http-запроса вида:
+
+```
+GET /chat HTTP/1.1
+Host: server.example.com
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Key: x3JJHMbDL1EzLkh9GBhXDw==
+Sec-WebSocket-Protocol: chat, superchat
+Sec-WebSocket-Version: 13
+Origin: http://example.com
+```
+
+На что серевр должен ответить:
+
+```
+HTTP/1.1 101 Switching Protocols
+Upgrade: websocket
+Connection: Upgrade
+Sec-WebSocket-Accept: HSmrc0sMlYUkAGmm5OPpG2HaGWk=
+Sec-WebSocket-Protocol: chat
+```
+
+Поэтому при подключении можно передавать дополнительные заголовки или cookies, например, для авторизации.
+
+После создания сессия нужно подключиться к серверу по протоколу ws. Для этого нужно вызвать функцию `ws_connect`.
+
+Полезные методы (короутины) объекта `ClientWebSocketResponse`:
+
+-   `ping`/`pong`: служебные методы, которые поддерживают ws-соединение. Если по TCP-соединению ничего не передавать, оно может закрыться по таймауту, а в функции `ws_connect` есть включенный по умолчанию параметр `autoping`
+-   `send_str`/`send_bytes`/`send_json`: функции, позволяющие отправлять данные в web socket на сервер
+-   `receive`: короутина, позволяющая получать данные из web socket с сервера. Короутина неявно обрабатывает сообщение PING, PONG и CLOSE, при этом не возвращая их. Она обрабатывает "игру в пинг-понг" и выполняет закрытие, если пришло сообщение CLOSE. Короутина `receive_str` разрешает получать только сообщения типа TEXT, `receive_bytes` сообщения типа BINARY и `receive_json` - сообщения типа TEXT, преобразовывая их в словарь.
+
+При этом `ClientWebSocketResponse` является асинхронным итератором. При использовании синтаксиса ниже происходит вызов функции `receive`:
+
+```python
+async for msg in ws:
+        print('New Message: ', msg)
+```
+
+Переменная `msg` являетс объектом класса `WSMessage`. Сообщение состоит из 3 полей: `type`, `data` и `extra`. Библиотека aiohttp обрабатывает служебные сообщения сама, а пользователю достаточно получать сообщения с помощью высокоуровневого интерфейса `receive`
