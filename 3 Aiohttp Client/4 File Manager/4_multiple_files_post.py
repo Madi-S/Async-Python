@@ -20,5 +20,6 @@ async def post_many_file():
         async with session.post('http://httpbin.org/post', data=data) as r:
             print('Response:', await r.text())
 
+
 if __name__ == '__main__':
     asyncio.run(post_many_file())
