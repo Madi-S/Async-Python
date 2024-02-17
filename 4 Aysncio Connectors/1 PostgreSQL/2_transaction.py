@@ -14,7 +14,7 @@ async def get_connection_by_dsn():
 
 
 async def insert_many(connection) -> asyncpg.Record:
-     async with connection.transaction():
+    async with connection.transaction():
         for i in range(10):
             name = f'name {i}'
             await connection.execute(
@@ -41,14 +41,14 @@ async def select_many(connection) -> typing.AsyncIterator[asyncpg.Record]:
 
 async def main() -> None:
     connection = await get_connection_by_dsn()
-    
+
     await insert_many(connection)
-    
+
     try:
         await transaction_with_error(connection)
     except ZeroDivisionError:
         pass
-    
+
     async for record in select_many(connection):
         print('select many record:', record)
 
