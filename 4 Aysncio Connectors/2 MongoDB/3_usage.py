@@ -36,7 +36,7 @@ async def find_user_by_id(user_id: ObjectId) -> User | None:
 
 async def run():
     user_id = await insert_user(
-    User(first_name='Alexander', last_name='Opryshko', is_tutor=True)
+        User(first_name='Alexander', last_name='Opryshko', is_tutor=True)
     )
     print('insert_user', user_id)
     user = await find_user_by_id(user_id)
