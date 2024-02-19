@@ -20,7 +20,7 @@ async def insert_many():
     is_active = False
     for i in range(20):
         bulk.append({
-            'first_name': f'first_name #{i}', 
+            'first_name': f'first_name #{i}',
             'last_name': f'last_name #{i}',
             'is_active': is_active
         })
@@ -29,13 +29,15 @@ async def insert_many():
 
 
 async def find_using_cursor():
-    cursor = get_user_collection().find({'is_active': {'$eq': True}}).sort('first_name')
+    cursor = get_user_collection().find(
+        {'is_active': {'$eq': True}}).sort('first_name')
     for document in await cursor.to_list(length=5):
         print(document)
 
 
 async def find_using_async_for():
-    cursor = get_user_collection().find({'is_active': {'$eq': True}}).sort('first_name')
+    cursor = get_user_collection().find(
+        {'is_active': {'$eq': True}}).sort('first_name')
     async for document in cursor:
         print(document)
 

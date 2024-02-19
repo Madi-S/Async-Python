@@ -139,7 +139,7 @@ SELECT u.*, h.hobby FROM Users AS u LEFT JOIN Hobbies AS h ON (h.user_id = u.use
 
 -   В примере используется способ через `asdict`. Далее из полученного словаря нужно удалить `_id`, чтобы Mongo автоматически сгенерировала свой `_id` для документа.
 
--   `find_user_by_id`, функция `collection.find_one()` вернет словарь. Его нужно превратить в объект `User`, поэтому нужно вызвать `User.Schema().load(document)` 
+-   `find_user_by_id`, функция `collection.find_one()` вернет словарь. Его нужно превратить в объект `User`, поэтому нужно вызвать `User.Schema().load(document)`
 
 ## Many
 
