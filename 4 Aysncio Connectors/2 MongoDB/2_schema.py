@@ -1,8 +1,8 @@
 import bson
 import typing
 from dataclasses import field
-from marshmallow import Schema, ValidationError, fields, missing
 from marshmallow_dataclass import dataclass
+from marshmallow import Schema, ValidationError, fields, missing
 
 
 class ObjectIdField(fields.Field):
