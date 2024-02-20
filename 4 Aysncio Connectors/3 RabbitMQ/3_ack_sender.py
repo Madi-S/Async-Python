@@ -14,7 +14,7 @@ async def sender():
     await channel.default_exchange.publish(
         Message('Hello World!'.encode()), routing_key='ack'
     )
-    print('[x] Sent 'Hello World!'')
+    print('[x] Sent "Hello World!"')
     await connection.close()
 
 

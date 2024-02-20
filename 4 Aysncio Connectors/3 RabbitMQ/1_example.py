@@ -15,7 +15,7 @@ async def on_message(message: IncomingMessage):
     print('[x] Received message %r' % message)
     print('Message body is: %r' % message.body)
     print('Before sleep!')
-    await asyncio.sleep(5) # Represents async IO-Bound operations
+    await asyncio.sleep(5)  # Represents async IO-Bound operations
     print('After sleep!')
 
 
@@ -47,9 +47,9 @@ async def sender():
     for i in range(2):
         await channel.default_exchange.publish(
             Message(f'{i} - Hello World!'.encode()),
-            routing_key='hello',
-        )   
-    print('[x] Sent 'Hello World!'')
+            routing_key='hello'
+        )
+    print('[x] Sent "Hello World!"')
     await connection.close()
 
 
