@@ -201,3 +201,51 @@ queue = await channel.declare_queue()
 # Временная очередь без имени, существующая в рамках соединения
 queue = await channel.declare_queue(exclusive=True)
 ```
+
+## Routing
+
+Наша система логирования из предыдущего примера транслирует все сообщения всем потребителя. Предположим, что мы хотим расширить её, чтобы позволить фильтровать все сообщения на основе их уровня. Критические сообщения будем складывать на диск а все сообщения отображать в stdout.
+
+В прошлом примере мы использовали тип FANOUT, который не дает нам особой гибкости - рассылаем всем связанным очердям сообщения. Вместо этого мы будем использовать exchange типа DIRECT.
+
+![direct_exchange](/static/direct_exchange.png)
+
+В первом примере с `default_exchange` мы использовали параметр `routing_key` при отправке сообщения:
+
+```python
+await channel.default_exchange.publish(Message(f'{i} - Hello World'.encode()), routing_key='hello')
+```
+
+Теперь мы будем использовать его более осознанно. Рассмотрим картинку выше. На ней отображен direct exchange, который привязан к двум очередям. Первая очередь имеет `routing_key`, равный orange, вторая black и green. То есть сообщения с `routing_key` black или green попадут в очередь Q2. Сообщения с любыми другими значениями `routing_key` будут удалены.
+
+Чтобы привязать очередь к конкретному exchange и `routing_key`, нужно вызвать:
+
+```python
+await queue1.bind(exchange, routing_key='orange')
+await queue2.bind(exchange, routing_key='black')
+await queue3.bind(exchange, routing_key='green')
+```
+
+Также можно привязать 2 разные очереди к одинаковому `routing_key`. Таким образом можно повторить поведения режима FANOUT, когда мы транслируем все пришедшие сообщения во все привязанные очереди
+
+Смотри `6_routing_sender.py` и `7_routing_receiver.py`
+
+Обрати внимание, что здесь мы объявляем exchange с типом DIRECT и соединяем очередь с ключем critical:
+
+```python
+await queue.bind(logs_exchange, routing_key='critical')
+```
+
+Обратите внимание, что здесь мы соединяем очередь с ключем info и critical:
+
+```python
+await queue.bind(logs_exchange, routing_key='info')
+await queue.bind(logs_exchange, routing_key='critical')
+```
+
+В RabbitMQ есть более продвинутая система роутинга. Она основана на Topic (ExchangeType.Topic).
+
+В примере выше мы присоединяли очереди к exchange на основе `routing_key`. Если `routing_key` при отправке сообщения полностью совпадал с `routing_key`, который был объявлен при соединении exchange и очереди, то сообщение попадало в указанную очередь. В RabbitMQ есть возможность привязывать очереди к exchange не по полному совпадению, а по шаблону:
+
+-   info.\*
+-   \*.info
