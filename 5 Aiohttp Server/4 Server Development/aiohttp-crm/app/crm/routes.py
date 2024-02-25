@@ -1,7 +1,11 @@
-from aiohttp.web_app import Application
-
-from app.crm.views import index
+import typing
 
 
-def setup_routes(app: Application):
-    app.router.add_get('/index', index)
+if typing.TYPE_CHECKING:
+    from app.web.app import Application
+
+
+def setup_routes(app: 'Application'):
+    from app.crm.views import AddUserView
+
+    app.router.add_view('/add_user', AddUserView)
