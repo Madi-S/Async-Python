@@ -46,10 +46,10 @@ class Future:
     def __init__(self, name: str):
         self.result = None
         self._callbacks = []
-    
+
     def add_done_callback(self, fn):
         self._callbacks.append(fn)
-    
+
     def set_result(self, result):
         self.result = result
         for fn in self._callbacks:
@@ -79,7 +79,7 @@ class Task:
         f = Future()
         f.set_result(None)
         self.step(f)
-    
+
     def step(self, future: Future):
         try:
             next_future = self.coroutines.send(future.result)
