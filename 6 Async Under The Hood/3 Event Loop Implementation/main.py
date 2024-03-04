@@ -1,5 +1,6 @@
 import socket
 from selectors import EVENT_READ, EVENT_WRITE, BaseSelector, DefaultSelector
+from yarl import URL
 
 
 class Future:
@@ -99,6 +100,7 @@ class AsyncSocket:
         while chunk:
             buffer.extend(chunk)
             chunk = yield from self.read()
+        return bytes(buffer)
 
 
 class EventLoop:
@@ -134,11 +136,39 @@ def get_event_loop() -> EventLoop:
     return _GlobalEventLoop
 
 
+class HttpClient:
+    def __init__(self):
+        pass
+
+    def get(
+        self,
+        url: str,
+        query: dict[str, str] | None = {},
+        headers: dict[str, str] | None = {}
+    ):
+        u = URL(url)
+        u = u.with_query(query)
+
+        headers['Host'] = u.host
+        headers['Connection'] = 'close'
+        headers_str = '\r\n'.join(
+            f'{key}: {value}'
+            for key, value in headers.items()
+        )
+
+        request = f'GET {u.path_qs} HTTP/1.1\r\n{headers_str}\r\n\r\n'
+
+        s = AsyncSocket()
+        yield from s.connect(u.host, u.port)
+        yield from s.send(request.encode())
+        response = yield from s.read_all()
+        return response
+
+
 def main():
-    s = AsyncSocket()
-    yield from s.connect('google.com', 80)
-    yield from s.send('GET / HTTP/1.1\r\nHost: google.com\r\n\r\n'.encode())
-    yield from s.read()
+    client = HttpClient()
+    result = yield from client.get('http://python.org/')
+    print(result.decode())
 
 
 if __name__ == '__main__':
