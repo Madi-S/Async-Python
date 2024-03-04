@@ -1,5 +1,7 @@
+from dataclasses import dataclass, field
 import socket
 from selectors import EVENT_READ, EVENT_WRITE, BaseSelector, DefaultSelector
+import time
 from yarl import URL
 
 
@@ -103,10 +105,18 @@ class AsyncSocket:
         return bytes(buffer)
 
 
+@dataclass(order=True)
+class TimeFuture:
+    dt: float
+    future: Future = field(compare=False)
+
+
 class EventLoop:
     def __init__(self):
         self._selector = DefaultSelector()
         self._tasks: set[Task] = set()
+        self._current_time = time.time()
+        self._timer: list[TimeFuture] = []
 
     @property
     def selector(self) -> BaseSelector:
@@ -115,11 +125,27 @@ class EventLoop:
     def create_task(self, task: Task):
         self._tasks.add(task)
 
+    def call_later(self, timeout: float, future: Future):
+        tf = TimeFuture(self._current_time + timeout, future)
+        self._timer.append(tf)
+        self._timer.sort()
+
     def run(self):
         while self._tasks:
-            events = self._selector.select()
-            for event_key, _ in events:
-                event_key.data()
+            self._current_time = time.time()
+
+            while self._timer and self._timer[0].dt <= self._current_time:
+                tf = self._timer.pop(0)
+                tf.future.set_result(None)
+
+            if self._selector.get_map():
+                events = self._selector.select()
+                for event_key, _ in events:
+                    event_key.data()
+            else:
+                if self._timer:
+                    dt = self._timer[0].dt - time.time()
+                    time.sleep(dt)
 
             for task in self._tasks.copy():
                 if task.is_done:
@@ -161,17 +187,63 @@ class HttpClient:
         s = AsyncSocket()
         yield from s.connect(u.host, u.port)
         yield from s.send(request.encode())
-        response = yield from s.read_all()
-        return response
+        return (yield from s.read_all())
+
+
+def gather(*coros: callable):
+    results = {}
+    gather_future = Future()
+
+    def on_task_done(f):
+        results[f] = f.result
+
+        if len(results) == len(coros):
+            gather_future.set_result(results)
+
+    tasks = []
+    for coro in coros:
+        task = Task(coro)
+        task.add_done_callback(on_task_done)
+        tasks.append(task)
+        get_event_loop().create_task(task)
+
+    yield from gather_future
+
+    return [results[task] for task in tasks]
+
+
+def sleep(timeout: float):
+    f = Future()
+    get_event_loop().call_later(timeout, f)
+    yield from f
 
 
 def main():
     client = HttpClient()
-    result = yield from client.get('http://python.org/')
-    print(result.decode())
+
+    yield from gather(
+        sleep(1.0),
+        sleep(1.0),
+        client.get('http://python.org/', query={'foo': 'bar'}),
+        client.get('http://python.org/', query={'foo': 'bar'}),
+        client.get('http://python.org/', query={'foo': 'bar'}),
+        sleep(1.0),
+        gather(
+            client.get('http://python.org/', query={'foo': 'bar'}),
+            client.get('http://python.org/', query={'foo': 'bar'}),
+            client.get('http://python.org/', query={'foo': 'bar'}),
+            sleep(1.0),
+        )
+    )
+    # Total time: 1.0 seconds
 
 
 if __name__ == '__main__':
+    start_time = time.monotonic()
+
     loop = get_event_loop()
     loop.create_task(Task(main()))
     loop.run()
+
+    finish_time = time.monotonic()
+    print(f'Total time: {finish_time - start_time} seconds')
