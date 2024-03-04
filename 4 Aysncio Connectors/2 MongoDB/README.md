@@ -119,7 +119,7 @@ SELECT u.*, h.hobby FROM Users AS u LEFT JOIN Hobbies AS h ON (h.user_id = u.use
 
 ### Пример
 
-Смотрим `2_schema.py`
+Смотри `2_schema.py`
 
 Разберем алгоритм действий:
 
