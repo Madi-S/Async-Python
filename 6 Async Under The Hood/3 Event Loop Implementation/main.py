@@ -12,6 +12,10 @@ class Future:
     def result(self):
         return self._result
 
+    @property
+    def is_done(self):
+        return self._is_done
+
     def set_result(self, value):
         self._result = value
         self._is_done = True
@@ -21,10 +25,16 @@ class Future:
     def add_done_callback(self, callback):
         self._callbacks.append(callback)
 
+    def __iter__(self):
+        yield self
+        return self.result
 
-class Task:
+
+class Task(Future):
     def __init__(self, coro):
+        super().__init__()
         self._coro = coro
+
         f = Future()
         f.set_result(None)
         self.step(f)
@@ -32,7 +42,8 @@ class Task:
     def step(self, future: Future):
         try:
             f = self._coro.send(future.result)
-        except StopIteration:
+        except StopIteration as e:
+            self.set_result(e.value)
             return
         f.add_done_callback(self.step)
 
@@ -56,9 +67,7 @@ class AsyncSocket:
 
         get_event_loop().selector.register(self._sock.fileno(), EVENT_WRITE, callback)
 
-        yield f
-        print('connected')
-        return f.result
+        return (yield from f)
 
     def send(self, data: bytes):
         f = Future()
@@ -70,9 +79,7 @@ class AsyncSocket:
 
         get_event_loop().selector.register(self._sock.fileno(), EVENT_WRITE, callback)
 
-        yield f
-        print('sent')
-        return f.result
+        return (yield from f)
 
     def read(self, size: int = 4096):
         f = Future()
@@ -84,15 +91,20 @@ class AsyncSocket:
 
         get_event_loop().selector.register(self._sock.fileno(), EVENT_READ, callback)
 
-        yield f
-        print('read')
-        return f.result
+        return (yield from f)
+
+    def read_all(self):
+        buffer = bytearray()
+        chunk = yield from self.read()
+        while chunk:
+            buffer.extend(chunk)
+            chunk = yield from self.read()
 
 
 class EventLoop:
     def __init__(self):
         self._selector = DefaultSelector()
-        self._tasks = set()
+        self._tasks: set[Task] = set()
 
     @property
     def selector(self) -> BaseSelector:
@@ -102,13 +114,16 @@ class EventLoop:
         self._tasks.add(task)
 
     def run(self):
-        while True:
-            # try:
+        while self._tasks:
             events = self._selector.select()
-            # except OSError:
-            #     break
             for event_key, _ in events:
                 event_key.data()
+
+            for task in self._tasks.copy():
+                if task.is_done:
+                    self._tasks.remove(task)
+
+        self.selector.close()
 
 
 _GlobalEventLoop = EventLoop()
